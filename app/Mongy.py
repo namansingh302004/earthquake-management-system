@@ -4,7 +4,7 @@ from pymongo.errors import ConnectionFailure
 
 class MongoDB:
     def __init__(self, db_name, collection_name,
-                 uri="mongodb+srv://Aditya:Aditya@acr-user-data.3el6t.mongodb.net/?retryWrites=true&w=majority&appName=ACR-user-data"):
+                 uri=""):
         """
         Initialize connection to MongoDB (local or cloud).
         :param db_name: Name of the database

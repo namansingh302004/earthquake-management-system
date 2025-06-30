@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infrastructure Management Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.css" />
+    <style>
+        :root {
+            --primary-bg: #0f172a;
+            --secondary-bg: #1e293b;
+            --accent-color: #3b82f6;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --danger: #ef4444;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --panel-bg: rgba(15, 23, 42, 0.95);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background-color: var(--primary-bg);
+            color: var(--text-primary);
+        }
+
+        .dashboard-container {
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 20px;
+            padding: 20px;
+            height: 100vh;
+        }
+
+        .map-section {
+            position: relative;
+        }
+
+        #map {
+            height: calc(100vh - 40px);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .infrastructure-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: var(--panel-bg);
+            padding: 20px;
+            border-radius: 12px;
+            z-index: 1000;
+            width: 300px;
+        }
+
+        .infra-section {
+            margin-bottom: 20px;
+        }
+
+        .infra-section h3 {
+            margin-bottom: 10px;
+            color: var(--text-secondary);
+            font-size: 1.1em;
+            padding-bottom: 5px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .infra-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .infra-button {
+            padding: 10px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .infra-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .infra-button.active {
+            background: var(--accent-color);
+        }
+
+        .marker-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .essential-marker {
+            background: var(--success);
+        }
+
+        .hazardous-marker {
+            background: var(--danger);
+        }
+
+        .populated-marker {
+            background: var(--warning);
+        }
+
+        .chat-section {
+            background: var(--secondary-bg);
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            padding: 15px;
+            background: var(--panel-bg);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .chat-messages {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 15px;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 8px;
+            max-width: 85%;
+        }
+
+        .system-message {
+            background: var(--panel-bg);
+            margin-left: auto;
+            margin-right: auto;
+            text-align: center;
+        }
+
+        .user-message {
+            background: var(--accent-color);
+            margin-left: auto;
+        }
+
+        .chat-input {
+            padding: 15px;
+            background: var(--panel-bg);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .chat-input input {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 6px;
+            background: var(--secondary-bg);
+            color: var(--text-primary);
+        }
+
+        .status-panel {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: var(--panel-bg);
+            padding: 15px;
+            border-radius: 12px;
+            z-index: 1000;
+        }
+
+        .status-text {
+            color: var(--text-secondary);
+            font-size: 0.9em;
+        }
+
+        .status-count {
+            color: var(--text-primary);
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="map-section">
+            <div id="map"></div>
+            
+            <div class="infrastructure-panel">
+                <div class="infra-section">
+                    <h3>Essential Infrastructure</h3>
+                    <div class="infra-buttons">
+                        <button class="infra-button" onclick="toggleInfrastructure('hospital')">
+                            <span class="marker-dot essential-marker"></span>
+                            Hospitals
+                        </button>
+                        <button class="infra-button" onclick="toggleInfrastructure('emergency')">
+                            <span class="marker-dot essential-marker"></span>
+                            Emergency
+                        </button>
+                        <button class="infra-button" onclick="toggleInfrastructure('police')">
+                            <span class="marker-dot essential-marker"></span>
+                            Police
+                        </button>
+                        <button class="infra-button" onclick="toggleInfrastructure('fire')">
+                            <span class="marker-dot essential-marker"></span>
+                            Fire Station
+                        </button>
+                    </div>
+                </div>
+
+                <div class="infra-section">
+                    <h3>Hazardous Infrastructure</h3>
+                    <div class="infra-buttons">
+                        <button class="infra-button" onclick="toggleInfrastructure('chemical')">
+                            <span class="marker-dot hazardous-marker"></span>
+                            Chemical
+                        </button>
+                        <button class="infra-button" onclick="toggleInfrastructure('power')">
+                            <span class="marker-dot hazardous-marker"></span>
+                            Power Plant
+                        </button>
+                    </div>
+                </div>
+
+                <div class="infra-section">
+                    <h3>Populated Areas</h3>
+                    <div class="infra-buttons">
+                        <button class="infra-button" onclick="toggleInfrastructure('residential')">
+                            <span class="marker-dot populated-marker"></span>
+                            Residential
+                        </button>
+                        <button class="infra-button" onclick="toggleInfrastructure('school')">
+                            <span class="marker-dot populated-marker"></span>
+                            Schools
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2 class="card-title">🚨 Emergency Requests</h2>
+                <div id="requestsList"></div>
+                <div>
+                    <button class="Mapp" onclick="request_page()">Go to Request</button>
+                </div>
+            </div>
+
+            <div class="status-panel">
+                <div class="status-text">
+                    Essential Infrastructure in Safe Zone: <span id="safeCount" class="status-count">0</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="chat-section">
+            <div class="chat-header">
+                <h3>Infrastructure Analysis Chat</h3>
+            </div>
+            <div class="chat-messages" id="chatMessages">
+                <div class="message system-message">
+                    Infrastructure Analysis System Active
+                </div>
+            </div>
+            <div class="chat-input">
+                <input type="text" placeholder="Type your message..." id="messageInput" 
+                       onkeypress="if(event.key === 'Enter') sendMessage()">
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.js"></script>
+    <script>
+        // Initialize map
+        const map = L.map('map').setView([12.8406, 80.1534], 13);
+        let interiorCircle, exteriorCircle;
+        let activeMarkers = {};
+        let infrastructureData = {};
+
+        // Add the satellite layer
+        L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_satellite/{z}/{x}/{y}{r}.jpg', {
+            maxZoom: 20,
+            attribution: '&copy; Stadia Maps'
+        }).addTo(map);
+
+        // Infrastructure data with coordinates in the safe zone
+        const infrastructure = {
+            hospital: [
+                { lat: 12.8506, lng: 80.1634, name: "General Hospital" },
+                { lat: 12.8306, lng: 80.1734, name: "Emergency Care Center" }
+            ],
+            emergency: [
+                { lat: 12.8406, lng: 80.1834, name: "Emergency Response Unit" }
+            ],
+            police: [
+                { lat: 12.8456, lng: 80.1734, name: "Police Station" }
+            ],
+            fire: [
+                { lat: 12.8356, lng: 80.1684, name: "Fire Station" }
+            ],
+            chemical: [
+                { lat: 12.8456, lng: 80.1484, name: "Chemical Plant" }
+            ],
+            power: [
+                { lat: 12.8356, lng: 80.1584, name: "Power Plant" }
+            ],
+            residential: [
+                { lat: 12.8406, lng: 80.1634, name: "Residential Complex" }
+            ],
+            school: [
+                { lat: 12.8456, lng: 80.1534, name: "Public School" }
+            ]
+        };
+
+        // Restore hulls from previous page
+        function restoreHulls() {
+            const params = new URLSearchParams(window.location.search);
+            const lat = parseFloat(params.get('lat')) || 12.8406;
+            const lng = parseFloat(params.get('lng')) || 80.1534;
+            const radius = parseFloat(params.get('radius')) || 6;
+
+            const interiorRadius = (radius / 3) * 1000;
+            const exteriorRadius = radius * 1000;
+
+            interiorCircle = L.circle([lat, lng], {
+                color: '#ef4444',
+                fillColor: '#ef4444',
+                fillOpacity: 0.2,
+                radius: interiorRadius
+            }).addTo(map);
+
+            exteriorCircle = L.circle([lat, lng], {
+                color: '#10b981',
+                fillColor: '#10b981',
+                fillOpacity: 0.1,
+                radius: exteriorRadius
+            }).addTo(map);
+
+            map.setView([lat, lng]);
+        }
+
+        function isInSafeZone(lat, lng) {
+            if (!exteriorCircle || !interiorCircle) return false;
+            
+            const point = L.latLng(lat, lng);
+            const epicenter = exteriorCircle.getLatLng();
+            const distance = point.distanceTo(epicenter);
+            
+            return distance <= exteriorCircle.getRadius() && distance > interiorCircle.getRadius();
+        }
+
+        function toggleInfrastructure(type) {
+            const button = document.querySelector(`button[onclick="toggleInfrastructure('${type}')"]`);
+            button.classList.toggle('active');
+
+            if (activeMarkers[type]) {
+                activeMarkers[type].forEach(marker => map.removeLayer(marker));
+                delete activeMarkers[type];
+            } else {
+                activeMarkers[type] = [];
+                const markerColor = type.includes('hospital') || type.includes('emergency') || type.includes('police') || type.includes('fire') 
+                    ? '#10b981' : type.includes('chemical') || type.includes('power') 
+                    ? '#ef4444' : '#f59e0b';
+
+                infrastructure[type].forEach(item => {
+                    if (type.includes('hospital') || type.includes('emergency') || type.includes('police') || type.includes('fire')) {
+                        // Only plot essential infrastructure in safe zone
+                        if (isInSafeZone(item.lat, item.lng)) {
+                            const marker = L.circleMarker([item.lat, item.lng], {
+                                radius: 8,
+                                color: markerColor,
+                                fillColor: markerColor,
+                                fillOpacity: 0.8
+                            }).addTo(map);
+                            marker.bindPopup(`${item.name}`);
+                            activeMarkers[type].push(marker);
+                        }
+                    } else {
+                        const marker = L.circleMarker([item.lat, item.lng], {
+                            radius: 8,
+                            color: markerColor,
+                            fillColor: markerColor,
+                            fillOpacity: 0.8
+                        }).addTo(map);
+                        marker.bindPopup(`${item.name}`);
+                        activeMarkers[type].push(marker);
+                    }
+                });
+            }
+            updateSafeCount();
+        }
+
+        function updateSafeCount() {
+            let count = 0;
+            Object.keys(activeMarkers).forEach(type => {
+                if (type.includes('hospital') || type.includes('emergency') || type.includes('police') || type.includes('fire')) {
+                    count += activeMarkers[type].length;
+                }
+            });
+            document.getElementById('safeCount').textContent = count;
+        }
+
+        function addMessage(text, type = 'user') {
+            const chatMessages = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}-message`;
+            messageDiv.textContent = text;
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            if (message) {
+                addMessage(message);
+                input.value = '';
+            }
+        }
+
+        const requests = [
+            { type: 'Medical', location: 'Central Hospital', priority: 'Critical' },
+            { type: 'Rescue', location: 'Sector 4', priority: 'High' },
+            { type: 'Supplies', location: 'Emergency Shelter A', priority: 'Medium' },
+            { type: 'Structural', location: 'Main Bridge', priority: 'High' }
+        ];
+
+        function renderRequests() {
+            const requestsList = document.getElementById('requestsList');
+            requestsList.innerHTML = requests.map(req => `
+                <div class="request-item">
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>${req.type}</span>
+                        <span class="priority-badge priority-${req.priority.toLowerCase()}">
+                            ${req.priority}
+                        </span>
+                    </div>
+                    <div style="color: var(--text-secondary);">${req.location}</div>
+                </div>
+            `).join('');
+        }
+
+        // Initialize
+        restoreHulls();
+        addMessage('Hull zones restored. Click infrastructure buttons to view locations.', 'system');
+    </script>
+</body>
+</html>

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Leaflet Routing Example</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.css" />
+  <style>
+    #map { height: 100vh; }
+    .coordinates {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: white;
+      padding: 10px;
+      border-radius: 5px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.3);
+      font-family: Arial, sans-serif;
+      z-index: 1000;
+    }
+  </style>
+</head>
+<body>
+
+<div class="coordinates" id="coordinates"></div>
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.js"></script>
+
+<script>
+  // Initialize the map
+  var map = L.map('map').setView([57.74, 11.94], 13);
+
+  // Add OpenStreetMap tile layer
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 18,
+  }).addTo(map);
+
+  let waypoints = [];
+  let markers = [];
+  let routingControl;
+
+  // Function to update the route
+  function updateRoute() {
+    if (routingControl) {
+      map.removeControl(routingControl);
+    }
+    if (waypoints.length === 2) {
+      routingControl = L.Routing.control({
+        waypoints: waypoints,
+        routeWhileDragging: true
+      }).addTo(map);
+    }
+    displayCoordinates();
+  }
+
+  // Function to add marker and update the route
+  function addMarkerAndRoute(latlng) {
+    if (markers.length < 2) {
+      const marker = L.marker(latlng).addTo(map);
+      markers.push(marker);
+      waypoints.push(latlng);
+    } else {
+      map.removeLayer(markers[1]); // Remove the second marker
+      markers[1] = L.marker(latlng).addTo(map); // Add the new marker
+      waypoints[1] = latlng; // Update the second waypoint
+    }
+    updateRoute();
+  }
+
+  // Display coordinates
+  function displayCoordinates() {
+    const coordDiv = document.getElementById('coordinates');
+    coordDiv.innerHTML = '';
+    waypoints.forEach((point, index) => {
+      coordDiv.innerHTML += `Point ${index + 1}: Latitude: ${point.lat.toFixed(5)}, Longitude: ${point.lng.toFixed(5)}<br>`;
+    });
+  }
+
+  // Click event to select points
+  map.on('click', function(e) {
+    addMarkerAndRoute(e.latlng);
+  });
+</script>
+
+</body>
+</html>

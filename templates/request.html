@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emergency Request Management</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        :root {
+            --primary-bg: #0f172a;
+            --secondary-bg: #1e293b;
+            --accent-color: #3b82f6;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --success: #10b981;
+        }
+
+        body {
+            background-color: var(--primary-bg);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 20px;
+        }
+
+        .nav-links a {
+            color: var(--text-primary);
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            transition: background-color 0.3s ease;
+        }
+
+        .nav-links a:hover {
+            background: rgba(59, 130, 246, 0.2);
+        }
+
+        .request-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+        }
+
+        .request-list {
+            background: rgba(30, 41, 59, 0.8);
+            padding: 20px;
+            border-radius: 12px;
+        }
+
+        .request-filters {
+            background: rgba(30, 41, 59, 0.8);
+            padding: 20px;
+            border-radius: 12px;
+            height: fit-content;
+        }
+
+        .request-card {
+            background: rgba(51, 65, 85, 0.5);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+            transition: transform 0.2s ease;
+        }
+
+        .request-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .request-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .urgency-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+
+        .urgency-critical {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+        }
+
+        .urgency-urgent {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--warning);
+        }
+
+        .urgency-normal {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+        }
+
+        .request-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 12px;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .filter-group {
+            margin-bottom: 16px;
+        }
+
+        .filter-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+        }
+
+        .filter-group select,
+        .filter-group input {
+            width: 100%;
+            padding: 8px;
+            background: rgba(51, 65, 85, 0.5);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 4px;
+            color: var(--text-primary);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .btn {
+            padding: 6px 12px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background-color 0.3s ease;
+        }
+
+        .btn-accept {
+            background: var(--success);
+            color: var(--text-primary);
+        }
+
+        .btn-forward {
+            background: var(--warning);
+            color: var(--text-primary);
+        }
+
+        .search-bar {
+            margin-bottom: 20px;
+        }
+
+        .search-bar input {
+            width: 100%;
+            padding: 12px;
+            background: rgba(51, 65, 85, 0.5);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 8px;
+            color: var(--text-primary);
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: var(--secondary-bg);
+            padding: 24px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 500px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 8px;
+            background: rgba(51, 65, 85, 0.5);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 4px;
+            color: var(--text-primary);
+        }
+
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .create-request-btn {
+            background: var(--accent-color);
+            color: var(--text-primary);
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            margin-bottom: 20px;
+        }
+
+        .create-request-btn:hover {
+            background: #2563eb;
+        }
+
+        .form-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .btn-modal {
+            padding: 8px 16px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .btn-primary {
+            background: var(--accent-color);
+            color: var(--text-primary);
+        }
+
+        .btn-secondary {
+            background: rgba(51, 65, 85, 0.5);
+            color: var(--text-primary);
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 20px;
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+   
+    <header>
+            <h1>Emergency Requests</h1>
+            <div class="nav-links">
+                <a href="index.html">Dashboard</a>
+                <a href="#">Tasks</a>
+                <a href="#" style="background: rgba(59, 130, 246, 0.2);">Requests</a>
+            </div>
+        </header>
+
+        <button class="create-request-btn" onclick="Login()">+ Create New Request</button>
+
+        <div class="request-grid">
+            <div class="request-list">
+                <div class="search-bar">
+                    <input type="text" id="searchInput" placeholder="Search requests..." onkeyup="applyFilters()">
+                </div>
+                <div id="requestContainer">
+                    <!-- Request cards will be dynamically rendered here -->
+                </div>
+            </div>
+
+            <div class="request-filters">
+                <h3>Filters</h3>
+                <div class="filter-group">
+                    <label>Urgency Level</label>
+                    <select id="urgencyFilter" onchange="applyFilters()">
+                        <option value="">All</option>
+                        <option value="critical">Critical</option>
+                        <option value="urgent">Urgent</option>
+                        <option value="normal">Normal</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Location</label>
+                    <select id="locationFilter" onchange="applyFilters()">
+                        <option value="">All Sectors</option>
+                        <option value="sector1">Sector 1</option>
+                        <option value="sector2">Sector 2</option>
+                        <option value="sector3">Sector 3</option>
+                        <option value="sector4">Sector 4</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Request Type</label>
+                    <select id="typeFilter" onchange="applyFilters()">
+                        <option value="">All Types</option>
+                        <option value="medical">Medical</option>
+                        <option value="rescue">Rescue</option>
+                        <option value="supplies">Supplies</option>
+                        <option value="structural">Structural</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Time Range</label>
+                    <select id="timeFilter" onchange="applyFilters()">
+                        <option value="">All Time</option>
+                        <option value="1">Last Hour</option>
+                        <option value="4">Last 4 Hours</option>
+                        <option value="24">Last 24 Hours</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Request Modal -->
+    <div class="modal" id="requestModal">
+        <div class="modal-content">
+            <button onclick="Login()">Create Request</button>
+                                 
+        </div>
+    </div>
+    <script>
+        // Sample data
+        let requests = [
+            {
+                id: 1,
+                title: "Medical Assistance Required",
+                description: "Multiple injuries reported at Location A-7. Emergency medical team needed immediately.",
+                urgency: "critical",
+                type: "medical",
+                location: "sector4",
+                timestamp: new Date(Date.now() - 10 * 60000), // 10 minutes ago
+                block: "Block A-7"
+            },
+            {
+                id: 2,
+                title: "Structural Support Needed",
+                description: "Building showing signs of instability. Engineering team required for assessment.",
+                urgency: "urgent",
+                type: "structural",
+                location: "sector2",
+                timestamp: new Date(Date.now() - 25 * 60000), // 25 minutes ago
+                block: "Block C-3"
+            },
+            {
+                id: 3,
+                title: "Water Supply Request",
+                description: "Emergency water supply needed for temporary shelter at community center.",
+                urgency: "normal",
+                type: "supplies",
+                location: "sector1",
+                timestamp: new Date(Date.now() - 45 * 60000), // 45 minutes ago
+                block: "Block B-5"
+            }
+        ];
+
+        // Render requests
+        function renderRequests(filteredRequests) {
+            const container = document.getElementById('requestContainer');
+            
+            if (filteredRequests.length === 0) {
+                container.innerHTML = '<div class="no-results">No requests match your criteria</div>';
+                return;
+            }
+
+            container.innerHTML = filteredRequests.map(request => `
+                <div class="request-card">
+                    <div class="request-header">
+                        <strong>${request.title}</strong>
+                        <span class="urgency-badge urgency-${request.urgency}">${request.urgency}</span>
+                    </div>
+                    <p>${request.description}</p>
+                    <div class="request-meta">
+                        <span>📍 ${request.location.replace(/^sector/, 'Sector ')}, ${request.block}</span>
+                        <span>🕒 ${getTimeAgo(request.timestamp)}</span>
+                    </div>
+                    <div class="action-buttons">
+                        <button class="btn btn-accept" onclick="acceptRequest(${request.id})">Accept Request</button>
+                        <button class="btn btn-forward" onclick="forwardRequest(${request.id})">Forward</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Filter functions
+        function applyFilters() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const urgency = document.getElementById('urgencyFilter').value;
+            const location = document.getElementById('locationFilter').value;
+            const type = document.getElementById('typeFilter').value;
+            const timeRange = document.getElementById('timeFilter').value;
+
+            let filtered = requests.filter(request => {
+                const matchesSearch = request.title.toLowerCase().includes(searchTerm) ||
+                                    request.description.toLowerCase().includes(searchTerm);
+                const matchesUrgency = !urgency || request.urgency === urgency;
+                const matchesLocation = !location || request.location === location.toLowerCase();
+                const matchesType = !type || request.type === type;
+                const matchesTime = !timeRange || 
+                                  (new Date() - request.timestamp) <= (timeRange * 60 * 60 * 1000);
+
+                return matchesSearch && matchesUrgency && matchesLocation && 
+                       matchesType && matchesTime;
+            });
+
+            filtered.sort((a, b) => b.timestamp - a.timestamp);
+            renderRequests(filtered);
+        }
+
+        // Modal functions
+        function showModal() {
+            document.getElementById('requestModal').style.display = 'flex';
+        }
+
+        function hideModal() {
+            document.getElementById('requestModal').style.display = 'none';
+            document.getElementById('requestForm').reset();
+        }
+
+        // Create new request
+        function Login() {
+            window.location.href = "forms2.html";
+        }
+
+        // Utility functions
+        function getTimeAgo(date) {
+            const seconds = Math.floor((new Date() - date) / 1000);
+            
+            if (seconds < 60) return 'just now';
+            if (seconds < 3600) return `${Math.floor(seconds / 60)} minutes ago`;
+            if (seconds < 86400) return `${Math.floor(seconds / 3600)} hours ago`;
+            return `${Math.floor(seconds / 86400)} days ago`;
+        }
+
+        function acceptRequest(id) {
+            alert(`Request ${id} accepted`);
+            // Implementation for accepting request
+        }
+
+        function forwardRequest(id) {
+            alert(`Request ${id} forwarded`);
+            // Implementation for forwarding request
+        }
+
+        // Initialize
+        applyFilters();
+    </script>
+
+</body>
+</html>

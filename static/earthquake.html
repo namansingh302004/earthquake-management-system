@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Earthquake Response Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        :root {
+            --primary-bg: #0f172a;
+            --secondary-bg: #1e293b;
+            --accent-color: #3b82f6;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --success: #10b981;
+        }
+
+        body {
+            background-color: var(--primary-bg);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Enhanced Background Animation */
+        .background-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            perspective: 1000px;
+            overflow: hidden;
+        }
+
+        .building {
+            position: absolute;
+            background: linear-gradient(45deg, #2a4365, #1a365d);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            transform-style: preserve-3d;
+            animation: shake 0.5s infinite;
+        }
+
+        .falling-debris {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.3);
+            animation: fall 2s linear infinite;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px) rotateZ(-1deg); }
+            75% { transform: translateX(5px) rotateZ(1deg); }
+        }
+
+        @keyframes fall {
+            0% {
+                transform: translateY(-100vh) rotate(0deg);
+                opacity: 0;
+            }
+            10% { opacity: 1; }
+            100% {
+                transform: translateY(100vh) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 1440px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .alert-badge {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+            padding: 8px 16px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 300px 1fr 300px;
+            gap: 20px;
+        }
+
+        .card {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .mapcard {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            height: 500px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .card-title {
+            font-size: 24px;
+            font-weight: 600;
+            margin: 0 0 16px 0;
+            color: #fff;
+        }
+
+        #map {
+            flex: 1;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            border-radius: 8px;
+        }
+
+        .map-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .map-placeholder img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+
+        .Mapp {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 16px;
+        }
+
+        .Mapp:hover {
+            background: #2563eb;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+        }
+        .task-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px;
+            background: rgba(51, 65, 85, 0.5);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            transition: background-color 0.3s ease;
+        }
+
+        .task-item:hover {
+            background: rgba(51, 65, 85, 0.7);
+        }
+
+        .request-item {
+            background: rgba(51, 65, 85, 0.5);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 8px;
+            transition: transform 0.3s ease;
+        }
+
+        .request-item:hover {
+            transform: translateX(5px);
+        }
+
+        .priority-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+
+        .priority-high, .priority-critical {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+        }
+
+        .priority-medium {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--warning);
+        }
+
+        #map {
+            height: 400px;
+            width: 600px;
+            background: rgba(51, 65, 85, 0.5);
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .map-placeholder {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: var(--text-secondary);
+            width: 400px;
+            height: 450px;;
+        }
+
+        .resource-item {
+            background: rgba(51, 65, 85, 0.5);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 8px;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: rgba(51, 65, 85, 0.5);
+            border-radius: 4px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--accent-color);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        .chat-container {
+            height: 300px;
+            overflow-y: auto;
+            padding-right: 8px;
+        }
+
+        .chat-container::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .chat-container::-webkit-scrollbar-track {
+            background: rgba(51, 65, 85, 0.3);
+            border-radius: 3px;
+        }
+
+        .chat-container::-webkit-scrollbar-thumb {
+            background: var(--accent-color);
+            border-radius: 3px;
+        }
+
+        .chat-message {
+            background: rgba(51, 65, 85, 0.5);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 8px;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(-10px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+            font-size: 0.9rem;
+        }
+
+        .message-time {
+            color: var(--text-secondary);
+        }
+
+        .chat-input {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+        }
+
+        .chat-input input {
+            flex: 1;
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            background: rgba(51, 65, 85, 0.5);
+            color: var(--text-primary);
+            transition: border-color 0.3s ease;
+        }
+
+        .chat-input input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+        }
+
+        .chat-input button {
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: none;
+            background: var(--accent-color);
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .chat-input button:hover {
+            background: #2563eb;
+        }
+
+        .seismic-container {
+            position: relative;
+            height: 300px;
+            padding: 20px;
+        }
+
+        .magnitude-alert {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+            padding: 8px 16px;
+            border-radius: 8px;
+            animation: pulse 2s infinite;
+        }
+        
+        select {
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #3b82f6;
+            background: #3b82f6;
+        }
+        .chat-controls{
+            padding-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="background-animation" id="backgroundAnimation"></div>
+
+    <div class="container">
+        <header>
+            <div>
+                <h1>Emergency Response System</h1>
+                <div class="alert-badge">
+                    <span>⚠️</span>
+                    <span>Active Earthquake Event - Magnitude 6.8</span>
+                </div>
+            </div>
+            <div class="alert-badge">Live Response</div>
+        </header>
+
+        <div class="grid">
+            <!-- Left Column -->
+            <div>
+                <div class="card">
+                    <h2 class="card-title">📋 Tasks Allocated</h2>
+                    <div id="tasksList"></div>
+                    <div>
+                        <button class="Mapp" onclick="task_page()"> Go to Task</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2 class="card-title">🚨 Emergency Requests</h2>
+                    <div id="requestsList"></div>
+                    <div>
+                        <button class="Mapp" onclick="request_page()">Go to Request</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Center Column -->
+               <div >
+                <div class="mapcard">
+                    <h2 class="card-title">🗺️ Impact Zone Map</h2>
+                    <div id="map">
+                        <div class="map-placeholder">
+                            <img src="map_view.jpeg" alt="Map will be displayed here">
+                        </div>
+                    </div>
+                    <div>
+                        <button class="Mapp" onclick="map_page()">Go to Map</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2 class="card-title">📊 Seismic Activity</h2>
+                    <div class="seismic-container">
+                        <canvas id="seismicChart"></canvas>
+                        <div class="magnitude-alert">Current: 6.8M</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column -->
+            <div>
+                <div class="card">
+                    <h2 class="card-title">📦 Available Resources</h2>
+                    <div id="resourcesList"></div>
+                </div>
+
+                <div class="card">
+                    <h2 class="card-title">🚨 Emergency Response Chat</h2>
+                    <div class="chat-controls">
+                        <select id="chatScope">
+                            <option value="intra">Intra-agency</option>
+                            <option value="inter">Inter-agency</option>
+                            <option value="global">Global</option>
+                        </select>
+                        
+                    </div>
+                    <div class="chat-container" id="chatContainer"></div>
+                    <div class="chat-input">
+                        <input type="text" id="messageInput" placeholder="Type your message...">
+                        <button onclick="sendMessage()">Send</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+
+        function task_page() {
+            window.location.href = "task.html";
+        }
+
+        function request_page() {
+            window.location.href = "request.html";
+        }
+
+        function map_page(){
+            window.location.href="map.html";
+        }
+        // Background Animation
+        function createBuilding() {
+            const container = document.getElementById('backgroundAnimation');
+            const building = document.createElement('div');
+            building.className = 'building';
+            
+            const width = Math.random() * 40 + 20;
+            const height = Math.random() * 100 + 50;
+            const left = Math.random() * 100;
+            
+            building.style.width = `${width}px`;
+            building.style.height = `${height}px`;
+            building.style.left = `${left}%`;
+            building.style.bottom = '0';
+            
+            container.appendChild(building);
+        }
+
+        function createDebris() {
+            const container = document.getElementById('backgroundAnimation');
+            const debris = document.createElement('div');
+            debris.className = 'falling-debris';
+            debris.style.left = `${Math.random() * 100}%`;
+            container.appendChild(debris);
+
+            debris.addEventListener('animationend', () => {
+                debris.remove();
+            });
+        }
+
+        // Tasks Data and Functions
+        const tasks = [
+            { id: 1, text: 'Evacuate Sector 3', completed: false },
+            { id: 2, text: 'Deploy Medical Teams', completed: false },
+            { id: 3, text: 'Assess Building Damage', completed: false },
+            { id: 4, text: 'Set up Emergency Shelters', completed: false },
+            { id: 5, text: 'Coordinate with First Responders', completed: false }
+        ];
+
+        function renderTasks() {
+            const tasksList = document.getElementById('tasksList');
+            tasksList.innerHTML = tasks.map(task => `
+                <div class="task-item">
+                    <input type="checkbox" ${task.completed ? 'checked' : ''} 
+                           onchange="toggleTask(${task.id})">
+                    <span style="text-decoration: ${task.completed ? 'line-through' : 'none'}">${task.text}</span>
+                </div>
+            `).join('');
+        }
+
+        function toggleTask(id) {
+            const task = tasks.find(t => t.id === id);
+            if (task) {
+                task.completed = !task.completed;
+                renderTasks();
+            }
+        }
+
+        // Emergency Requests Data and Functions
+        const requests = [
+            { type: 'Medical', location: 'Central Hospital', priority: 'Critical' },
+            { type: 'Rescue', location: 'Sector 4', priority: 'High' },
+            { type: 'Supplies', location: 'Emergency Shelter A', priority: 'Medium' },
+            { type: 'Structural', location: 'Main Bridge', priority: 'High' }
+        ];
+
+        function renderRequests() {
+            const requestsList = document.getElementById('requestsList');
+            requestsList.innerHTML = requests.map(req => `
+                <div class="request-item">
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>${req.type}</span>
+                        <span class="priority-badge priority-${req.priority.toLowerCase()}">
+                            ${req.priority}
+                        </span>
+                    </div>
+                    <div style="color: var(--text-secondary);">${req.location}</div>
+                </div>
+            `).join('');
+        }
+
+        // Resources Data and Functions
+        const resources = [
+        { name: 'Paramedics', available: 5, total: 8 },
+        { name: 'Fire Engine', available: 3, total: 6 },
+        { name: 'Ambulance', available: 12, total: 15 },
+        { name: 'Heavy Machines', available: 150, total: 200 },
+        { name: 'Scouts', available: 2, total: 3 }
+    ];
+
+    function renderResources() {
+        const resourcesList = document.getElementById('resourcesList');
+        resourcesList.innerHTML = resources.map(resource => `
+            <div class="resource-item">
+                <div style="display: flex; justify-content: space-between;">
+                    <span>${resource.name}</span>
+                    <span>${resource.available}/${resource.total}</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: ${(resource.available / resource.total) * 100}%"></div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    // Chat System
+    let messages = [
+            { sender: 'System', message: 'Emergency Response System activated', time: '10:28', scope: 'global' },
+            { sender: 'Supply Forces', message: 'Teams dispatched to sector 3', time: '10:30', scope: 'inter' },
+            { sender: 'Medical Forces', message: 'Need additional supplies at hospital', time: '10:32', scope: 'intra' },
+            { sender: 'Scouting Forces', message: 'Setting up perimeter around damaged areas', time: '10:35', scope: 'inter' },
+            { sender: 'Resource Forces', message: 'Mobilizing water tankers to affected areas', time: '10:36', scope: 'intra' },
+            { sender: 'Shelter Forces', message: 'Setting up emergency shelter at Community Center', time: '10:37', scope: 'global' },
+            { sender: 'Medical Forces', message: 'Triage center established at Zone 2', time: '10:38', scope: 'inter' },
+            { sender: 'Supply Forces', message: 'Emergency rations dispatched', time: '10:39', scope: 'intra' },
+            { sender: 'Scouting Forces', message: 'Detected structural damage in Block A', time: '10:40', scope: 'global' },
+            { sender: 'Resource Forces', message: 'Generator backup activated in Sector 1', time: '10:41', scope: 'inter' },
+            { sender: 'Shelter Forces', message: 'Current capacity: 150/200', time: '10:42', scope: 'intra' },
+            { sender: 'System', message: 'Weather Alert: Heavy rain expected', time: '10:43', scope: 'global' },
+            { sender: 'Medical Forces', message: 'Requesting additional paramedics', time: '10:44', scope: 'inter' },
+            { sender: 'Supply Forces', message: 'Inventory check: Medical supplies low', time: '10:45', scope: 'intra' },
+            { sender: 'Scouting Forces', message: 'Road access blocked on Main Street', time: '10:46', scope: 'global' }
+        ];
+
+        function getMessageClass(message) {
+            if (message.sender === 'System') return 'system-message';
+            if (message.scope === 'global') return 'global-message';
+            return '';
+        }
+
+        function renderChat() {
+            const chatContainer = document.getElementById('chatContainer');
+            const currentScope = document.getElementById('chatScope').value;
+            
+            const filteredMessages = messages.filter(msg => 
+                currentScope === 'global' || msg.scope === currentScope
+            );
+
+            chatContainer.innerHTML = filteredMessages.map(msg => `
+                <div class="chat-message ${getMessageClass(msg)}">
+                    <div class="message-header">
+                        <span>${msg.sender}</span>
+                        <span class="message-time">${msg.time}</span>
+                    </div>
+                    <div>${msg.message}</div>
+                </div>
+            `).join('');
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            const scope = document.getElementById('chatScope').value;
+            
+            if (message) {
+                messages.push({
+                    sender: `EMS Controller`,
+                    message: message,
+                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    scope: scope
+                });
+                input.value = '';
+                renderChat();
+            }
+        }
+
+        document.getElementById('messageInput').addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        document.getElementById('chatScope').addEventListener('change', renderChat);
+        renderChat();
+
+    // Enhanced Seismic Chart
+    function initSeismicChart() {
+        const ctx = document.getElementById('seismicChart').getContext('2d');
+        
+        // Generate more realistic seismic data
+        const timePoints = 20;
+        const labels = Array.from({length: timePoints}, (_, i) => {
+            const time = new Date();
+            time.setMinutes(time.getMinutes() - (timePoints - i));
+            return time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        });
+
+        const generateSeismicData = () => {
+            const mainShock = 6.8;
+            return Array.from({length: timePoints}, (_, i) => {
+                const distance = Math.abs(i - 10);
+                const aftershock = Math.max(0, mainShock - (distance * 0.3) + (Math.random() * 0.5));
+                return Number(aftershock.toFixed(1));
+            });
+        };
+
+        const seismicData = {
+            labels: labels,
+            datasets: [{
+                label: 'Magnitude',
+                data: generateSeismicData(),
+                borderColor: '#3b82f6',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                fill: true,
+                tension: 0.4,
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                pointBackgroundColor: '#3b82f6'
+            }]
+        };
+
+        new Chart(ctx, {
+            type: 'line',
+            data: seismicData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: {
+                    duration: 2000,
+                    easing: 'easeInOutQuart'
+                },
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        min: 0,
+                        max: 8,
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: '#94a3b8',
+                            callback: function(value) {
+                                return value.toFixed(1) + ' M';
+                            }
+                        }
+                    },
+                    x: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: '#94a3b8'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(30, 41, 59, 0.9)',
+                        titleColor: '#f8fafc',
+                        bodyColor: '#f8fafc',
+                        padding: 12,
+                        cornerRadius: 8,
+                        callbacks: {
+                            label: function(context) {
+                                return `Magnitude: ${context.raw.toFixed(1)}`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Simulated real-time updates
+    function simulateUpdates() {
+        // Randomly update resources
+        setInterval(() => {
+            resources.forEach(resource => {
+                if (Math.random() > 0.7) {
+                    resource.available = Math.max(0, Math.min(resource.total, 
+                        resource.available + Math.floor(Math.random() * 3) - 1));
+                }
+            });
+            renderResources();
+        }, 5000);
+
+        // Simulate new emergency requests
+        setInterval(() => {
+            if (Math.random() > 0.8) {
+                const newRequest = {
+                    type: ['Medical', 'Rescue', 'Supplies', 'Structural'][Math.floor(Math.random() * 4)],
+                    location: `Sector ${Math.floor(Math.random() * 8) + 1}`,
+                    priority: ['Critical', 'High', 'Medium'][Math.floor(Math.random() * 3)]
+                };
+                requests.unshift(newRequest);
+                if (requests.length > 6) requests.pop();
+                renderRequests();
+            }
+        }, 8000);
+
+        // Simulate new chat messages
+        const emergencyMessages = [
+            { sender: 'Police', message: 'Road blockade set up on Main St' },
+            { sender: 'Fire Dept', message: 'Building secured in Sector 2' },
+            { sender: 'Medical', message: 'Triage center operational' },
+            { sender: 'Rescue Team', message: 'Search completed in Zone A' }
+        ];
+
+        setInterval(() => {
+            if (Math.random() > 0.7) {
+                const randomMessage = emergencyMessages[Math.floor(Math.random() * emergencyMessages.length)];
+                messages.push({
+                    ...randomMessage,
+                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                });
+                renderChat();
+            }
+        }, 10000);
+    }
+
+    // Initialize everything
+    function init() {
+        // Create initial background elements
+        
+        setInterval(createDebris, 100);
+
+        // Initialize all components
+        renderTasks();
+        renderRequests();
+        renderResources();
+        renderChat();
+        initSeismicChart();
+        simulateUpdates();
+
+        // Add event listener for Enter key in chat
+        document.getElementById('messageInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+    }
+    
+
+      
+
+
+    // Initialize on page load
+    window.addEventListener('load', init);
+</script>
+</body>
+</html>

@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Emergency Response Map System</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.css"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --primary-bg: #0f172a;
+        --secondary-bg: #1e293b;
+        --accent-color: #3b82f6;
+        --accent-hover: #2563eb;
+        --text-primary: #f8fafc;
+        --text-secondary: #94a3b8;
+        --danger: #ef4444;
+        --warning: #f59e0b;
+        --success: #10b981;
+        --panel-bg: rgba(15, 23, 42, 0.95);
+        --shadow-color: rgba(0, 0, 0, 0.25);
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Inter", system-ui, -apple-system, sans-serif;
+        background-color: var(--primary-bg);
+        color: var(--text-primary);
+        line-height: 1.5;
+      }
+
+      .map-container {
+        position: relative;
+        width: calc(100% - 40px);
+        height: 700px;
+        border-radius: 16px;
+        overflow: hidden;
+        margin: 20px;
+        box-shadow: 0 8px 32px var(--shadow-color);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      #map {
+        width: 100%;
+        height: 100%;
+        background: var(--secondary-bg);
+      }
+
+      .controls-panel {
+        position: absolute;
+        top: 400px;
+        left: 20px;
+        background: var(--panel-bg);
+        padding: 20px;
+        border-radius: 12px;
+        z-index: 1000;
+        width: 280px;
+        backdrop-filter: blur(8px);
+        box-shadow: 0 4px 16px var(--shadow-color);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .region-status {
+        position: absolute;
+        top: 20px;
+        left: 100px;
+        background: var(--panel-bg);
+        padding: 40px;
+        border-radius: 12px;
+        z-index: 1000;
+        backdrop-filter: blur(8px);
+        box-shadow: 0 4px 16px var(--shadow-color);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .region-status h3 {
+        font-size: 1.1rem;
+        margin-bottom: 12px;
+        font-weight: 600;
+        color: var(--text-primary);
+      }
+
+      .status-indicator {
+        display: inline-block;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        margin-right: 10px;
+        transition: background-color 0.3s ease;
+        box-shadow: 0 0 8px currentColor;
+      }
+
+      .affected {
+        background-color: var(--danger);
+        color: var(--danger);
+      }
+
+      .unaffected {
+        background-color: var(--success);
+        color: var(--success);
+      }
+
+      .control-button {
+        background: var(--accent-color);
+        color: var(--text-primary);
+        border: none;
+        padding: 12px 16px;
+        border-radius: 8px;
+        cursor: pointer;
+        width: 100%;
+        margin-bottom: 12px;
+        transition: all 0.2s ease;
+        font-weight: 500;
+        font-size: 0.95rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+      }
+
+      .control-button:hover {
+        background: var(--accent-hover);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+      }
+
+      .control-button:active {
+        transform: translateY(0);
+      }
+
+      .coordinates-display {
+        margin-top: 16px;
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        background: rgba(0, 0, 0, 0.2);
+        padding: 12px;
+        border-radius: 8px;
+        line-height: 1.6;
+      }
+
+      .hull-legend {
+        position: absolute;
+        bottom: 20px;
+        right: 20px;
+        background: var(--panel-bg);
+        padding: 16px;
+        border-radius: 12px;
+        z-index: 1000;
+        backdrop-filter: blur(8px);
+        box-shadow: 0 4px 16px var(--shadow-color);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .legend-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+      }
+
+      .legend-item:last-child {
+        margin-bottom: 0;
+      }
+
+      .legend-color {
+        width: 24px;
+        height: 4px;
+        margin-right: 12px;
+        border-radius: 2px;
+        box-shadow: 0 0 8px currentColor;
+      }
+
+      /* Responsive adjustments */
+      @media (max-width: 768px) {
+        .map-container {
+          height: 500px;
+          margin: 10px;
+          width: calc(100% - 20px);
+        }
+
+        .controls-panel {
+          width: calc(100% - 40px);
+          top: auto;
+          bottom: 20px;
+          right: 20px;
+          left: 20px;
+        }
+
+        .hull-legend {
+          bottom: auto;
+          top: 90px;
+          right: 20px;
+        }
+      }
+      /* Add these styles to your existing CSS */
+      .leaflet-container {
+        background: var(--secondary-bg);
+      }
+
+      .leaflet-control-layers {
+        background: var(--panel-bg) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        border-radius: 8px !important;
+        backdrop-filter: blur(8px);
+        color: var(--text-primary) !important;
+      }
+
+      .leaflet-control-layers-toggle {
+        background-color: var(--panel-bg);
+        border-radius: 4px;
+      }
+
+      .leaflet-control-layers-expanded {
+        padding: 12px !important;
+        box-shadow: 0 4px 16px var(--shadow-color) !important;
+      }
+
+      .leaflet-control-scale {
+        background: var(--panel-bg);
+        padding: 4px 8px;
+        border-radius: 4px;
+        color: var(--text-primary);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .leaflet-control-scale-line {
+        border-color: var(--text-secondary);
+        color: var(--text-primary);
+        background: transparent;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="map-container">
+      <div id="map"></div>
+
+      <div class="region-status">
+        <h3>Region Status</h3>
+        <div id="statusIndicator">
+          <span class="status-indicator unaffected"></span>
+          <span id="statusText">Unaffected</span>
+        </div>
+      </div>
+
+      <div class="controls-panel">
+        <button class="control-button" onclick="toggleInteriorHull()">
+          Toggle Interior Hull
+        </button>
+        <button class="control-button" onclick="toggleExteriorHull()">
+          Toggle Exterior Hull
+        </button>
+        <button class="control-button" onclick="checkPoint()">
+          Check Current Point
+        </button>
+        <div class="coordinates-display">
+          Lat: <span id="lat">0</span><br />
+          Lng: <span id="lng">0</span>
+        </div>
+      </div>
+
+      <div class="hull-legend">
+        <div class="legend-item">
+          <div class="legend-color" style="background: #ef4444"></div>
+          <span>Interior Hull (Critical Zone)</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background: #10b981"></div>
+          <span>Exterior Hull (Warning Zone)</span>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet@1.8.0/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+    <script>
+      // Initialize map centered on the given coordinates
+      // Initialize map centered on the given coordinates with specific zoom level
+      const map = L.map("map", {
+        center: [12.8406, 80.1534],
+        zoom: 13,
+        zoomControl: true,
+        scrollWheelZoom: true,
+      });
+
+      // Add the satellite layer as base layer
+      const satelliteLayer = L.tileLayer(
+        "https://tiles.stadiamaps.com/tiles/alidade_satellite/{z}/{x}/{y}{r}.jpg",
+        {
+          minZoom: 0,
+          maxZoom: 20,
+          attribution:
+            "&copy; CNES, Distribution Airbus DS, © Airbus DS, © PlanetObserver | Stadia Maps",
+          ext: "jpg",
+        }
+      ).addTo(map);
+
+      // Add a dark-themed street layer as an alternative
+      const darkLayer = L.tileLayer(
+        "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+        {
+          attribution: "&copy; OpenStreetMap contributors &copy; CARTO",
+          subdomains: "abcd",
+          maxZoom: 20,
+        }
+      );
+
+      // Add layer control
+      const baseLayers = {
+        Satellite: satelliteLayer,
+        "Dark Map": darkLayer,
+      };
+
+      L.control
+        .layers(baseLayers, null, {
+          position: "topright",
+        })
+        .addTo(map);
+
+      // Add scale control
+      L.control
+        .scale({
+          metric: true,
+          imperial: false,
+          position: "bottomleft",
+        })
+        .addTo(map);
+
+      // Function to load and display hull data
+      async function loadHulls() {
+        try {
+          // Load interior hull
+          const interiorResponse = await fetch("interior_hull.geojson");
+          const interiorData = await interiorResponse.json();
+
+          // Load exterior hull
+          const exteriorResponse = await fetch("exterior_hull.geojson");
+          const exteriorData = await exteriorResponse.json();
+
+          // Create interior hull polygon
+          interiorHull = L.geoJSON(interiorData, {
+            style: {
+              color: "#ef4444",
+              fillColor: "#ef4444",
+              fillOpacity: 0.2,
+              weight: 2,
+            },
+          }).addTo(map);
+
+          // Create exterior hull polygon
+          exteriorHull = L.geoJSON(exteriorData, {
+            style: {
+              color: "#10b981",
+              fillColor: "#10b981",
+              fillOpacity: 0.1,
+              weight: 2,
+            },
+          }).addTo(map);
+        } catch (error) {
+          console.error("Error loading hull data:", error);
+        }
+      }
+
+      // Toggle functions for hulls
+      function toggleInteriorHull() {
+        showInterior = !showInterior;
+        if (interiorHull) {
+          if (showInterior) {
+            interiorHull.addTo(map);
+          } else {
+            interiorHull.remove();
+          }
+        }
+      }
+      function toggleExteriorHull() {
+        showExterior = !showExterior;
+        if (exteriorHull) {
+          if (showExterior) {
+            exteriorHull.addTo(map);
+          } else {
+            exteriorHull.remove();
+          }
+        }
+      }
+      let waypoints = [];
+      let markers = [];
+      let routingControl;
+
+      // Function to update the route
+      function updateRoute() {
+        if (routingControl) {
+          map.removeControl(routingControl);
+        }
+        if (waypoints.length === 2) {
+          routingControl = L.Routing.control({
+            waypoints: waypoints,
+            routeWhileDragging: true,
+          }).addTo(map);
+        }
+      }
+
+      // Function to add marker and update the route
+      function addMarkerAndRoute(latlng) {
+        if (markers.length < 2) {
+          const marker = L.marker(latlng).addTo(map);
+          markers.push(marker);
+          waypoints.push(latlng);
+        } else {
+          map.removeLayer(markers[1]); // Remove the second marker
+          markers[1] = L.marker(latlng).addTo(map); // Add the new marker
+          waypoints[1] = latlng; // Update the second waypoint
+        }
+        updateRoute();
+      }
+
+      // Click event to select points
+      map.on("click", function (e) {
+        addMarkerAndRoute(e.latlng);
+      });
+
+      // Function to update coordinates display
+      function updateCoordinates(lat, lng) {
+        document.getElementById("lat").textContent = lat.toFixed(6);
+        document.getElementById("lng").textContent = lng.toFixed(6);
+      }
+
+      // Function to check if point is in affected region
+      async function checkPoint() {
+        if (!currentMarker) return;
+
+        const point = currentMarker.getLatLng();
+        try {
+          const response = await fetch("/check_point", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              lat: point.lat,
+              lng: point.lng,
+            }),
+          });
+
+          const result = await response.json();
+          const statusIndicator = document.querySelector(".status-indicator");
+          const statusText = document.getElementById("statusText");
+
+          if (result.status === "Affected") {
+            statusIndicator.className = "status-indicator affected";
+            statusText.textContent = "Affected Region";
+          } else {
+            statusIndicator.className = "status-indicator unaffected";
+            statusText.textContent = "Unaffected Region";
+          }
+        } catch (error) {
+          console.error("Error checking point:", error);
+        }
+      }
+
+      // Map click handler
+      map.on("click", function (e) {
+        if (currentMarker) {
+          map.removeLayer(currentMarker);
+        }
+
+        currentMarker = L.marker(e.latlng).addTo(map);
+        updateCoordinates(e.latlng.lat, e.latlng.lng);
+      });
+
+      // Mouse move handler for coordinate updates
+      map.on("mousemove", function (e) {
+        updateCoordinates(e.latlng.lat, e.latlng.lng);
+      });
+
+      // Initialize hulls on load
+      loadHulls();
+    </script>
+  </body>
+</html>

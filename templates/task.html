@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Management - Earthquake Response</title>
+    <style>
+        /* [Previous CSS remains exactly the same] */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        :root {
+            --primary-bg: #0f172a;
+            --secondary-bg: #1e293b;
+            --accent-color: #3b82f6;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --success: #10b981;
+        }
+
+        body {
+            background-color: var(--primary-bg);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 20px;
+        }
+
+        .nav-links a {
+            color: var(--text-primary);
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            transition: background-color 0.3s ease;
+        }
+
+        .nav-links a:hover {
+            background: rgba(59, 130, 246, 0.2);
+        }
+
+        .task-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .task-column {
+            background: rgba(30, 41, 59, 0.8);
+            padding: 20px;
+            border-radius: 12px;
+            min-height: 400px;
+        }
+
+        .column-header {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .task-count {
+            background: rgba(59, 130, 246, 0.2);
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.9rem;
+        }
+
+        .task-card {
+            background: rgba(51, 65, 85, 0.5);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+            cursor: move;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .task-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .task-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .priority-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+
+        .priority-high {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+        }
+
+        .priority-medium {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--warning);
+        }
+
+        .priority-low {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+        }
+
+        .task-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 12px;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .add-task-btn {
+            background: var(--accent-color);
+            color: var(--text-primary);
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .add-task-btn:hover {
+            background: #2563eb;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: var(--secondary-bg);
+            padding: 24px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 500px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            background: rgba(51, 65, 85, 0.5);
+            color: var(--text-primary);
+        }
+
+        .form-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .btn-primary {
+            background: var(--accent-color);
+            color: var(--text-primary);
+        }
+
+        .btn-secondary {
+            background: rgba(51, 65, 85, 0.5);
+            color: var(--text-primary);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Task Management - Earthquake Response</h1>
+            <div class="header-actions">
+                <span id="lastSync"></span>
+            </div>
+        </header>
+
+        
+
+        <div class="task-grid">
+            <div class="task-column" id="todo">
+                <div class="column-header">
+                    <span>To Do</span>
+                    <span class="task-count">0</span>
+                </div>
+                <div class="task-list" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
+                <button class="add-task-btn" onclick="showModal('todo')">+ Add Task</button>
+            </div>
+
+            <div class="task-column" id="accepted">
+                <div class="column-header">
+                    <span>Accepted</span>
+                    <span class="task-count">0</span>
+                </div>
+                <div class="task-list" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
+            </div>
+
+            <div class="task-column" id="forwarded">
+                <div class="column-header">
+                    <span>Forwarded</span>
+                    <span class="task-count">0</span>
+                </div>
+                <div class="task-list" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
+            </div>
+
+            <div class="task-column" id="completed">
+                <div class="column-header">
+                    <span>Completed</span>
+                    <span class="task-count">0</span>
+                </div>
+                <div class="task-list" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="taskModal">
+        <div class="modal-content">
+            <button class="close-modal" onclick="hideModal()">&times;</button>
+            <h2>Add New Task</h2>
+            <form id="taskForm">
+                <div class="form-group">
+                    <label>Title</label>
+                    <input type="text" id="taskTitle" required>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="taskDescription" rows="3" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Priority</label>
+                    <select id="taskPriority" required>
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Assignee</label>
+                    <input type="text" id="taskAssignee" required>
+                </div>
+                <div class="form-group">
+                    <label>Due Date</label>
+                    <input type="date" id="taskDueDate" required>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="hideModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="notification" id="notification"></div>
+
+    <script>
+        // Initialize tasks from localStorage or use default data
+        let tasks = JSON.parse(localStorage.getItem('tasks')) || {
+            todo: [
+                {
+                    id: 1,
+                    title: 'Deploy Emergency Response Team Alpha',
+                    description: 'Immediate deployment of first responders to Zone A - Coordinate with local authorities',
+                    priority: 'high',
+                    assignee: 'John Smith',
+                    created: '2024-02-11',
+                    dueDate: '2024-02-11'
+                },
+                {
+                    id: 2,
+                    title: 'Set up Medical Camp',
+                    description: 'Establish field hospital in Sector 4 - Equipment and staff deployment required',
+                    priority: 'high',
+                    assignee: 'Dr. Sarah Johnson',
+                    created: '2024-02-11',
+                    dueDate: '2024-02-11'
+                },
+                {
+                    id: 3,
+                    title: 'Coordinate Supply Distribution',
+                    description: 'Organize distribution of emergency supplies: water, food, blankets',
+                    priority: 'high',
+                    assignee: 'Mike Wilson',
+                    created: '2024-02-11',
+                    dueDate: '2024-02-12'
+                }
+            ],
+            accepted: [
+                {
+                    id: 4,
+                    title: 'Building Assessment - Downtown',
+                    description: 'Evaluate structural integrity of affected buildings in downtown area',
+                    priority: 'medium',
+                    assignee: 'Engineering Team A',
+                    created: '2024-02-11',
+                    dueDate: '2024-02-12'
+                },
+                {
+                    id: 5,
+                    title: 'Emergency Communications Setup',
+                    description: 'Install temporary communication towers for affected areas',
+                    priority: 'medium',
+                    assignee: 'Tech Team',
+                    created: '2024-02-11',
+                    dueDate: '2024-02-12'
+                }
+            ],
+            forwarded: [
+                {
+                    id: 6,
+                    title: 'Evacuation Route Planning',
+                    description: 'Map and mark safe evacuation routes from affected areas',
+                    priority: 'high',
+                    assignee: 'Logistics Team',
+                    created: '2024-02-11',
+                    dueDate: '2024-02-12'
+                },
+                {
+                    id: 7,
+                    title: 'Power Grid Assessment',
+                    description: 'Evaluate damage to power infrastructure and plan repairs',
+                    priority: 'medium',
+                    assignee: 'Utility Team',
+                    created: '2024-02-11',
+                    dueDate: '2024-02-13'
+                }
+            ],
+            completed: [
+                {
+                    id: 8,
+                    title: 'Initial Damage Assessment',
+                    description: 'Preliminary survey of affected areas completed',
+                    priority: 'high',
+                    assignee: 'Survey Team',
+                    created: '2024-02-11',
+                    dueDate: '2024-02-11'
+                }
+            ]
+        };
+
+        // Update statistics
+        function updateStats() {
+            const totalTasks = Object.values(tasks).flat().length;
+            const highPriorityTasks = Object.values(tasks).flat().filter(task => task.priority === 'high').length;
+            const completedTasks = tasks.completed.length;
+            const completionRate = totalTasks ? ((completedTasks / totalTasks) * 100).toFixed(1) : 0;
+
+            document.getElementById('totalTasks').textContent = totalTasks;
+            document.getElementById('highPriorityTasks').textContent = highPriorityTasks;
+            document.getElementById('completionRate').textContent = `${completionRate}%`;
+            
+            // Update last sync time
+            document.getElementById('lastSync').textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
+        }
+
+        // Save tasks to localStorage
+        function saveTasks() {
+            localStorage.setItem('tasks', JSON.stringify(tasks));
+            showNotification('Changes saved successfully');
+            updateStats();
+        }
+
+        // Show notification
+        function showNotification(message) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.style.display = 'block';
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 3000);
+        }
+
+        // Render Tasks
+        function renderTasks() {
+            Object.keys(tasks).forEach(status => {
+                const column = document.querySelector(`#${status} .task-list`);
+                column.innerHTML = tasks[status].map(task => createTaskCard(task)).join('');
+                
+                // Update task count
+                const countElement = document.querySelector(`#${status} .task-count`);
+                countElement.textContent = tasks[status].length;
+            });
+            updateStats();
+        }
+
+        function createTaskCard(task) {
+            const dueDate = new Date(task.dueDate);
+            const isOverdue = dueDate < new Date() && task.status !== 'completed';
+            
+            return `
+                <div class="task-card ${isOverdue ? 'overdue' : ''}" 
+                     draggable="true" 
+                     ondragstart="drag(event)" 
+                     id="task-${task.id}">
+                    <div class="task-header">
+                        <strong>${task.title}</strong>
+                        <span class="priority-badge priority-${task.priority}">${task.priority}</span>
+                    </div>
+                    <p>${task.description}</p>
+                    <div class="task-meta">
+                        <span>👤 ${task.assignee}</span>
+                        <span>📅 ${task.dueDate}</span>
+                    </div>
+                    
+                </div>
+            `;
+        }
+
+        // Drag and Drop Functions
+        function allowDrop(ev) {
+            ev.preventDefault();
+            // Add visual feedback
+            const taskList = ev.target.closest('.task-list');
+            if (taskList) {
+                taskList.classList.add('drag-over');
+            }
+        }
+
+        function drag(ev) {
+            ev.dataTransfer.setData("text", ev.target.id);
+        }
+
+        function drop(ev) {
+            ev.preventDefault();
+            const taskList = ev.target.closest('.task-list');
+            if (taskList) {
+                taskList.classList.remove('drag-over');
+            }
+            
+            const taskId = ev.dataTransfer.getData("text");
+            const taskElement = document.getElementById(taskId);
+            const targetColumn = ev.target.closest('.task-column');
+            
+            if (targetColumn && taskElement) {
+                const sourceStatus = taskElement.closest('.task-column').id;
+                const targetStatus = targetColumn.id;
+                
+                if (sourceStatus !== targetStatus) {
+                    const id = parseInt(taskId.split('-')[1]);
+                    const taskIndex = tasks[sourceStatus].findIndex(t => t.id === id);
+                    const task = tasks[sourceStatus][taskIndex];
+                    
+                    tasks[sourceStatus].splice(taskIndex, 1);
+                    tasks[targetStatus].push(task);
+                    
+                    renderTasks();
+                    saveTasks();
+                    showNotification(`Task moved to ${targetStatus}`);
+                }
+            }
+        }
+
+        // Modal Functions
+        let currentColumn = null;
+
+        function showModal(column) {
+            currentColumn = column;
+            document.getElementById('taskModal').style.display = 'flex';
+            document.getElementById('taskDueDate').valueAsDate = new Date();
+        }
+
+        function hideModal() {
+            document.getElementById('taskModal').style.display = 'none';
+            document.getElementById('taskForm').reset();
+        }
+
+        // Delete Task
+        function deleteTask(taskId) {
+            if (confirm('Are you sure you want to delete this task?')) {
+                Object.keys(tasks).forEach(status => {
+                    const index = tasks[status].findIndex(t => t.id === taskId);
+                    if (index !== -1) {
+                        tasks[status].splice(index, 1);
+                        renderTasks();
+                        saveTasks();
+                        showNotification('Task deleted successfully');
+                    }
+                });
+            }
+        }
+
+        // Edit Task (placeholder for future implementation)
+        function editTask(taskId) {
+            showNotification('Edit functionality coming soon');
+        }
+
+        // Form Submission
+        document.getElementById('taskForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const newTask = {
+                id: Date.now(),
+                title: document.getElementById('taskTitle').value,
+                description: document.getElementById('taskDescription').value,
+                priority: document.getElementById('taskPriority').value,
+                assignee: document.getElementById('taskAssignee').value,
+                created: new Date().toISOString().split('T')[0],
+                dueDate: document.getElementById('taskDueDate').value
+            };
+
+            tasks[currentColumn].push(newTask);
+            renderTasks();
+            saveTasks();
+            hideModal();
+            showNotification('New task added successfully');
+        });
+
+        // Initialize the board
+        renderTasks();
+
+        // Add dragover listeners for visual feedback
+        document.querySelectorAll('.task-list').forEach(list => {
+            list.addEventListener('dragleave', function(e) {
+                this.classList.remove('drag-over');
+            });
+        });
+    </script>
+</body>
+</html>
